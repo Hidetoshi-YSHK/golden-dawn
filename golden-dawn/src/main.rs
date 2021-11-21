@@ -1,3 +1,7 @@
+#![windows_subsystem = "windows"]
+
+use std::fs;
+
 fn main() {
-    println!("Hello, world!");
+    fs::create_dir("20211121").ok();
 }
