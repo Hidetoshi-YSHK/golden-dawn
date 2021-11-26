@@ -1,0 +1,3 @@
+tmp_dir = 'C:\workspace\tmp'
+days_to_move = 14
+days_to_remove = 31
