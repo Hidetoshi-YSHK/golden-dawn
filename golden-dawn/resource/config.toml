@@ -1,4 +1,4 @@
-tmp_dir = 'C:\workspace\tmp'
+parent_dir = 'T:\daily'
 date_format = '%Y-%m-%d'
 days_to_move = 14
 days_to_remove = 31

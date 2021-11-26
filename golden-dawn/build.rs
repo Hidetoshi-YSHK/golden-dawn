@@ -14,8 +14,8 @@ fn main() {
     let target_dir = get_target_dir().expect("Failed to get target dir.");
 
     for x in COPY_INFO {
-        let src = Path::join(&current_dir, Path::new(x.0));
-        let dst = Path::join(&target_dir, Path::new(x.1));
+        let src = current_dir.join(Path::new(x.0));
+        let dst = target_dir.join(Path::new(x.1));
         let _ = fs::copy(src, dst);
     }
 }
