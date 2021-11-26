@@ -1,17 +1,18 @@
 //#![windows_subsystem = "windows"]
 
-use std::fs;
+use std::{fs, io::Error};
 use chrono::prelude::*;
 
 fn main() {
-    create_today_dir();
+    create_today_dir("%Y-%m-%d").expect("Could not create today's directory.");
     move_old_dir();
 }
 
-fn create_today_dir() {
+fn create_today_dir(format: &str) -> Result<String, Error> {
     let today = Local::today();
-    let today_dir_name = today.format("%Y-%m-%d").to_string();
-    fs::create_dir(today_dir_name).ok();
+    let today_dir_name = today.format(format).to_string();
+    fs::create_dir(&today_dir_name)?;
+    Ok(today_dir_name)
 }
 
 fn move_old_dir() {
