@@ -1,16 +1,17 @@
-//#![windows_subsystem = "windows"]
+#![windows_subsystem = "windows"]
 
 use std::io;
 use std::fs;
 use std::path::Path;
 use std::env::current_exe;
-use chrono::LocalResult;
-use chrono::prelude::*;
+
+use chrono::{Local, LocalResult, NaiveDate, TimeZone};
 use serde_derive::Deserialize;
 
 const CONFIG_FILE: &str = "config.toml";
 const OLD_DIR: &str = "old";
 
+/// Config data structure
 #[derive(Deserialize)]
 struct Config {
     parent_dir: String,
@@ -20,16 +21,21 @@ struct Config {
 }
 
 fn main() {
+    // Deserialize Config
     let config_str = read_config_file().expect("Could not read config file.");
     let config = toml::from_str::<Config>(&config_str)
         .expect("Could not parse config file.");
 
+    // parent directory path
     let parent_dir = Path::new(&config.parent_dir);
 
+    // Create today's directory.
     create_today_dir(parent_dir, &config.date_format)
         .expect("Could not create today's directory.");
 
-    let dir_names = get_dir_names(parent_dir).expect("Cound not get directories.");
+    // Move old directories to "old" directory.
+    let dir_names = get_dir_names(parent_dir)
+        .expect("Cound not get directories.");
     for dir_name in dir_names {
         if !matches_date_format(&dir_name, &config.date_format) {
             continue;
@@ -37,11 +43,27 @@ fn main() {
         let days_elapsed = calc_days_elapsed(&dir_name, &config.date_format)
             .expect("Failed to calc days elapsed.");
         if days_elapsed >= config.days_to_move.into() {
+            move_to_old_dir(parent_dir, &dir_name);
+        }
+    }
 
+    // Remove more old directories in "old" direcotry.
+    let dir_names = get_dir_names(parent_dir.join(OLD_DIR).as_path())
+        .expect("Cound not get directories.");
+    for dir_name in dir_names {
+        if !matches_date_format(&dir_name, &config.date_format) {
+            continue;
+        }
+        let days_elapsed = calc_days_elapsed(&dir_name, &config.date_format)
+            .expect("Failed to calc days elapsed.");
+        if days_elapsed >= config.days_to_remove.into() {
+            let _ = fs::remove_dir_all(
+                parent_dir.join(OLD_DIR).join(dir_name).as_path());
         }
     }
 }
 
+/// Read config file to String.
 fn read_config_file() -> io::Result<String> {
     let mut exe_dir = current_exe()?;
     exe_dir.pop();
@@ -50,6 +72,7 @@ fn read_config_file() -> io::Result<String> {
     Ok(fs::read_to_string(config_file)?)
 }
 
+/// Create today's directory.
 fn create_today_dir(parent_dir_path: &Path, date_format: &String) -> io::Result<()> {
     let today = Local::today();
     let today_dir_name = today.format(date_format).to_string();
@@ -62,6 +85,7 @@ fn create_today_dir(parent_dir_path: &Path, date_format: &String) -> io::Result<
     }
 }
 
+/// Get names of directries in parent directory.
 fn get_dir_names(parent_dir: &Path) -> io::Result<Vec<String>> {
     let read_dir = fs::read_dir(parent_dir)?;
     let mut dir_names = Vec::new();
@@ -77,6 +101,7 @@ fn get_dir_names(parent_dir: &Path) -> io::Result<Vec<String>> {
     Ok(dir_names)
 }
 
+/// Return whether directory name matches date format.
 fn matches_date_format(dir_name: &String, date_format: &String) -> bool {
     match NaiveDate::parse_from_str(dir_name, date_format) {
         Ok(_) => true,
@@ -84,6 +109,7 @@ fn matches_date_format(dir_name: &String, date_format: &String) -> bool {
     }
 }
 
+/// Calculate days elapsed of directory.
 fn calc_days_elapsed(dir_name: &String, date_format: &String) ->
     Result<i64, String> {
     let date = NaiveDate::parse_from_str(dir_name, date_format)
@@ -95,31 +121,13 @@ fn calc_days_elapsed(dir_name: &String, date_format: &String) ->
     }
 }
 
+/// Move a directory to "old" directory.
 fn move_to_old_dir(parent_dir: &Path, dir_name: &String) {
-    let target_dir = parent_dir.join(dir_name);
+    let src = parent_dir.join(dir_name);
     let old_dir = parent_dir.join(OLD_DIR);
-}
-
-fn move_old_dir() {
-    let read_dir = fs::read_dir(".").unwrap();
-    for dir_entry in read_dir {
-        let dir_entry = dir_entry.unwrap();
-        let metadata = dir_entry.metadata().unwrap();
-        if metadata.is_dir() {
-            let dir_name = dir_entry.file_name();
-            let dir_name = dir_name.into_string().unwrap();
-            println!("{}", dir_name);
-            let result = NaiveDate::parse_from_str(
-                dir_name.as_str(), "%Y-%m-%d");
-            match result {
-                Ok(date) => {
-                    let date = Local.from_local_date(&date).unwrap();
-                    let diff = Local::today() - date;
-                    let days = diff.num_days();
-                    println!("{}", days);
-                },
-                _ => ()
-            }
-        }
+    let dst = old_dir.join(dir_name);
+    if !old_dir.exists() {
+        let _ = fs::create_dir(old_dir);
     }
+    let _ = fs::rename(src, dst);
 }
