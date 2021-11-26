@@ -1,19 +1,35 @@
 //#![windows_subsystem = "windows"]
 
-use std::{fs, io::Error};
+use std::io;
+use std::fs;
+use std::path::PathBuf;
+use std::env::current_exe;
 use chrono::prelude::*;
 
 fn main() {
-    create_today_dir("%Y-%m-%d").expect("Could not create today's directory.");
+    let exe_dir = get_exe_dir().expect("Could not get exe directory.");
+
+    create_today_dir(&exe_dir, "%Y-%m-%d")
+        .expect("Could not create today's directory.");
+
     move_old_dir();
 }
 
-fn create_today_dir(format: &str) -> Result<String, Error> {
+fn get_exe_dir() -> io::Result<PathBuf> {
+    let mut path_buf = current_exe()?;
+    path_buf.pop();
+    Ok(path_buf)
+}
+
+fn create_today_dir(parent_dir: &PathBuf, format: &str) -> io::Result<()> {
     let today = Local::today();
     let today_dir_name = today.format(format).to_string();
-    fs::create_dir(&today_dir_name)?;
-    Ok(today_dir_name)
+    let mut path_buf = parent_dir.clone();
+    path_buf.push(&today_dir_name);
+    fs::create_dir(path_buf)
 }
+
+
 
 fn move_old_dir() {
     let read_dir = fs::read_dir(".").unwrap();
