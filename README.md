@@ -5,7 +5,7 @@ A daily directory maker.
 See golden-dawn/bin directory.
 
 ## Usage
-Edit config.toml and run golden.exe.  
+Edit config.toml and run golden-dawn.exe.  
 Using with Task Scheduler will enable auto run on suitable trigger.
 
 ### config.toml
